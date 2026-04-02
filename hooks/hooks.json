@@ -1,0 +1,41 @@
+{
+  "description": "Orientation telemetry — tracks survey start, completion, and fast-track",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh session:started '{\"pluginVersion\":\"1.0.0\"}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "^/orientation",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh orientation:started",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh session:ended",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
