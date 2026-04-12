@@ -29,11 +29,38 @@ Read the following reference files before starting:
 
 ---
 
-## Phase 0: Telemetry Config Check
+## Phase 0: Pre-Checks
 
-Before anything else, verify the telemetry config exists and has a valid invite code. This ensures the participant's progress is visible to instructors.
+Before anything else, check the working directory and telemetry config.
 
-### Step 1: Check the config file
+### Step 0: Working directory check
+
+Check if the participant is in the right folder:
+
+```bash
+test -f .claude/settings.json && echo "OK" || echo "NOT_FOUND"
+```
+
+**If OK:** Proceed silently.
+
+**If NOT_FOUND:** Check if the expected folder exists:
+```bash
+test -f ~/Projects/masterclass/.claude/settings.json && echo "EXISTS" || echo "MISSING"
+```
+
+- If EXISTS: "It looks like you're not in your project folder. Your project folder is at `~/Projects/masterclass/`. Please open it in VS Code (File > Open Folder) and start a new Claude Code session from there."
+- If MISSING: "I can't find your project folder. It should have been created by the VS Code extension. Please go back to the extension setup panel and click **Create** next to Project Folder, then open that folder in VS Code."
+
+In both cases, ask: "Would you like to continue anyway, or fix this first?"
+
+If they continue, fire telemetry:
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh orientation:wrong-directory "{\"cwd\":\"$(pwd)\",\"expectedPath\":\"~/Projects/masterclass\",\"settingsFound\":false}"
+```
+
+**Never blocking.** The check warns but does not prevent orientation from proceeding.
+
+### Step 1: Check the telemetry config file
 
 Run this command silently (do NOT show the raw output to the participant):
 
@@ -139,7 +166,11 @@ Check `$ARGUMENTS` for input.
 
 ## Phase 1: Survey — Round 1 (About You)
 
-Greet the participant warmly. Then ask the Round 1 questions from `survey-questions.md` one at a time in a conversational flow:
+Start with a brief confirmation and warm transition:
+
+> "LAH Orientation loaded — let's get started. Now it's just you and me. I'll ask you a few questions to figure out the best track for you."
+
+Then ask the Round 1 questions from `survey-questions.md` one at a time in a conversational flow:
 
 1. **Name** — "What's your name?"
 2. **Role** — "What's your role? For example: founder, developer, designer, student..."
@@ -332,10 +363,26 @@ Display the `recommendation` field.
 
 ### What's Next
 
-Based on their track, tell them what command to run:
+Based on their level and track, tell them what's next. This is the last thing they see before leaving orientation — it must point them to the right place.
 
-- **Dev track:** "You're all set! Run `/plan` to start building your PRD."
-- **AI Assistant track:** "You're all set! Run `/plan` to start designing your workflow."
+**If assigned Fundamental level (any track):**
+> "You're oriented and ready to go! Your next step is **Module 1: Guided Build** — you'll pick an idea, plan it, and build it with Claude Code. It's your first experience of the full dev flow.
+>
+> After the guided build, you'll continue with the modules for your track. That's when you'll install your track plugin. You'll follow the same plugin installation steps you just learned."
+
+**If assigned Intermediate or Advanced level (dev track):**
+> "You're oriented and ready to go! You can choose to do **Module 1: Guided Build** if you want the practice first, or go straight to your track's first module:
+>
+> - **Module 2b: Research** — competitive analysis, design direction, architecture
+>
+> When you arrive at your first track module, it will tell you which plugin to install. You'll follow the same plugin installation steps you just learned."
+
+**If assigned AI Assistant track (intermediate or advanced):**
+> "You're oriented and ready to go! You can choose to do **Module 1: Guided Build** if you want the practice first, or go straight to:
+>
+> - **Module 2c: PDD** — Prompt, Define, Develop
+>
+> When you arrive at your first track module, it will tell you which plugin to install. You'll follow the same plugin installation steps you just learned."
 
 ---
 
@@ -393,4 +440,4 @@ PAYLOAD
 )"
 ```
 
-5. Tell them: "You're on the **Developer track (Fundamental level)** — the guided path. Run `/plan` to start. You can always re-run `/orientation` later if you want a more tailored experience."
+5. Tell them: "You're on the **Developer track (Fundamental level)** — the guided path. Your next step is **Module 1: Guided Build** — you'll pick an idea, plan it, and build it with Claude Code. You can always re-run `/orientation` later if you want a more tailored experience."
