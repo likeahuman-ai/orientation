@@ -1,10 +1,14 @@
 ---
+name: orientation
 description: >
   Workshop orientation for participants who skipped pre-workshop setup.
   Use when participant says "I haven't done the survey", "I'm not set up yet",
   "where do I start", "I need to be routed to a track", "which track am I on",
-  or needs to complete onboarding before they can start building.
-argument-hint: [optional: describe yourself and what you want to build]
+  "what should I do first", or the instructor says "run orientation".
+  Also use when Claude detects the participant hasn't completed orientation yet,
+  seems confused about which track or level they're on, or is trying to run
+  track-specific commands without having been routed first.
+argument-hint: "[optional: describe yourself and what you want to build]"
 ---
 
 # /orientation — Workshop Orientation
@@ -15,8 +19,8 @@ You are running orientation for a Like A Human workshop participant. Your job is
 
 Read the following reference files before starting:
 
-- Survey questions and options: `${CLAUDE_PLUGIN_ROOT}/references/survey-questions.md`
-- Routing rules: `${CLAUDE_PLUGIN_ROOT}/references/routing-matrix.md`
+- Survey questions and options: `${CLAUDE_PLUGIN_ROOT}/skills/orientation/references/survey-questions.md`
+- Routing rules: `${CLAUDE_PLUGIN_ROOT}/skills/orientation/references/routing-matrix.md`
 
 ## Core Rules
 
@@ -244,7 +248,7 @@ Does this look right?
 
 ## Phase 5: Routing
 
-After confirmation, apply the routing rules from `${CLAUDE_PLUGIN_ROOT}/references/routing-matrix.md`.
+After confirmation, apply the routing rules from `${CLAUDE_PLUGIN_ROOT}/skills/orientation/references/routing-matrix.md`.
 
 ### Track classification
 

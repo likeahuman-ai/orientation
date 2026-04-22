@@ -1,6 +1,14 @@
 {
-  "name": "lah-orientation",
+  "name": "orientation",
   "version": "1.1.0",
   "description": "Workshop orientation — survey, routing, and feasibility report",
-  "author": { "name": "Like A Human" }
+  "author": {
+    "name": "LikeAHuman.ai",
+    "email": "academy@likeahuman.ai",
+    "url": "https://likeahuman.ai"
+  },
+  "homepage": "https://github.com/likeahuman-ai/orientation",
+  "repository": "https://github.com/likeahuman-ai/orientation",
+  "license": "MIT",
+  "skills": "./skills/"
 }
