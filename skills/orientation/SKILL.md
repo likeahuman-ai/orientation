@@ -35,9 +35,7 @@ Read the following reference files before starting:
 
 ## Phase 0: Pre-Checks
 
-Before anything else, check the working directory and telemetry config.
-
-### Step 0: Working directory check
+Before anything else, check the working directory.
 
 Check if the participant is in the right folder:
 
@@ -57,96 +55,7 @@ test -f ~/Projects/masterclass/.claude/settings.json && echo "EXISTS" || echo "M
 
 In both cases, ask: "Would you like to continue anyway, or fix this first?"
 
-If they continue, fire telemetry:
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh orientation:wrong-directory "{\"cwd\":\"$(pwd)\",\"expectedPath\":\"~/Projects/masterclass\",\"settingsFound\":false}"
-```
-
 **Never blocking.** The check warns but does not prevent orientation from proceeding.
-
-### Step 1: Check the telemetry config file
-
-Run this command silently (do NOT show the raw output to the participant):
-
-```bash
-cat ~/.lah/telemetry-config.json 2>/dev/null
-```
-
-### Step 2: Handle the result
-
-**If the file exists and has a non-empty `inviteCode`:**
-→ Silently note the invite code. Tell the participant: "Connected to the workshop — your progress will be visible to instructors."
-→ Proceed to Phase 0b.
-
-**If the file exists but `inviteCode` is empty or missing:**
-→ Ask: "I need your workshop invite code to connect you to the session. You can find it in the invite email you received. What's the code?"
-→ Once they provide it, update the config file:
-
-```bash
-python3 -c "
-import json, os
-config_path = os.path.expanduser('~/.lah/telemetry-config.json')
-with open(config_path) as f:
-    config = json.load(f)
-config['inviteCode'] = '$INVITE_CODE'
-with open(config_path, 'w') as f:
-    json.dump(config, f, indent=2)
-print('Updated')
-"
-```
-
-(Replace `$INVITE_CODE` with the actual code the participant provided.)
-
-→ Then verify the connection (Step 3).
-
-**If the file does not exist:**
-→ Tell the participant: "It looks like the VS Code extension hasn't finished setting up yet. Let me create the telemetry config so your progress is tracked."
-→ Ask for their invite code: "What's your workshop invite code? It's in your invite email."
-→ Create the config:
-
-```bash
-mkdir -p ~/.lah && python3 -c "
-import json, os
-config = {
-    'endpoint': 'https://adventurous-cricket-781.convex.site/plugin-telemetry',
-    'token': '',
-    'inviteCode': '$INVITE_CODE',
-    'extensionVersion': 'plugin-bootstrap'
-}
-config_path = os.path.expanduser('~/.lah/telemetry-config.json')
-with open(config_path, 'w') as f:
-    json.dump(config, f, indent=2)
-print('Created')
-"
-```
-
-**Note:** Without a token, telemetry POSTs will return 401. This is acceptable — the participant can still complete orientation. Tell them: "I've saved your invite code. Telemetry may not sync until the VS Code extension runs its setup. You can continue."
-
-### Step 3: Verify connection (only if token is present)
-
-Send a lightweight verification ping to confirm the invite code works:
-
-```bash
-CONFIG=$(cat ~/.lah/telemetry-config.json 2>/dev/null)
-ENDPOINT=$(echo "$CONFIG" | python3 -c "import json,sys; print(json.load(sys.stdin).get('endpoint',''))" 2>/dev/null)
-TOKEN=$(echo "$CONFIG" | python3 -c "import json,sys; print(json.load(sys.stdin).get('token',''))" 2>/dev/null)
-INVITE=$(echo "$CONFIG" | python3 -c "import json,sys; print(json.load(sys.stdin).get('inviteCode',''))" 2>/dev/null)
-
-[ -z "$TOKEN" ] && echo "NO_TOKEN" && exit 0
-
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$ENDPOINT" \
-  -H "Content-Type: application/json" \
-  -H "x-lah-token: $TOKEN" \
-  -d "{\"inviteCode\":\"$INVITE\",\"pluginName\":\"lah-orientation\",\"event\":\"orientation:config-verified\",\"payload\":{},\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")
-
-echo "$HTTP_CODE"
-```
-
-**If 200:** "Connected! Your progress will be visible to your instructors."
-**If 401:** "Token issue — telemetry won't sync until the VS Code extension completes setup. You can still continue."
-**If anything else:** "Couldn't reach the server — this might be a network issue. We'll continue anyway."
-
-In all cases, **proceed with the orientation.** The config check is a best-effort step, never a blocker.
 
 ---
 
@@ -279,37 +188,7 @@ Briefly explain what their track and level mean (1-2 sentences each, from `routi
 
 ---
 
-## Phase 6: Telemetry — Survey Completed
-
-**Immediately after routing** (before report generation), fire the survey telemetry event in the background:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh orientation:survey-completed "$(cat <<'PAYLOAD'
-{
-  "source": "plugin",
-  "name": "[name]",
-  "role": "[role]",
-  "codingExperience": "[codingExperience]",
-  "terminalComfort": "[terminalComfort]",
-  "primaryGoal": "[primaryGoal]",
-  "hasAppIdea": "[hasAppIdea]",
-  "buildDescription": "[buildDescription]",
-  "hasStartedBuilding": "[hasStartedBuilding]",
-  "existingProjectDescription": "[existingProjectDescription or null]",
-  "assignedTrack": "[track]",
-  "assignedFlowLevel": "[level]",
-  "trackConfidence": [confidence],
-  "fastTracked": false
-}
-PAYLOAD
-)"
-```
-
-Replace all `[placeholders]` with actual values. This event creates the backend survey record even if report generation fails.
-
----
-
-## Phase 7: Report Generation
+## Phase 6: Report Generation
 
 Dispatch the `orientation-advisor` agent with the participant profile:
 
@@ -336,7 +215,7 @@ Wait for the agent to return the JSON report.
 
 ---
 
-## Phase 8: Report Display
+## Phase 7: Report Display
 
 Parse the advisor's JSON report and present it conversationally:
 
@@ -390,33 +269,6 @@ Based on their level and track, tell them what's next. This is the last thing th
 
 ---
 
-## Phase 9: Telemetry — Report Generated
-
-After displaying the report, fire the report telemetry event in the background:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh orientation:report-generated "$(cat <<'PAYLOAD'
-{
-  "source": "plugin",
-  "feasibility": "[feasibility]",
-  "summary": "[summary]",
-  "mvpScope": [mvpScope as JSON array],
-  "stretchGoals": [stretchGoals as JSON array],
-  "techStack": [techStack as JSON array],
-  "challenges": [challenges as JSON array],
-  "recommendation": "[recommendation]",
-  "assignedTrack": "[track]",
-  "assignedFlowLevel": "[level]",
-  "buildDescription": "[buildDescription]"
-}
-PAYLOAD
-)"
-```
-
-Done. The participant is oriented and ready to start building.
-
----
-
 ## Fast-Track Path
 
 Only triggered by explicit skip language in `$ARGUMENTS`: "skip", "just get me started", "put me anywhere".
@@ -428,20 +280,5 @@ Only triggered by explicit skip language in `$ARGUMENTS`: "skip", "just get me s
    - Terminal comfort: "basic"
    - Primary goal: "learn"
    - Build description: "To be decided — participant chose to skip orientation and start building immediately"
-3. Display the report (same format as Phase 8)
-4. Fire the fast-track telemetry event:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/telemetry/send-event.sh orientation:fast-tracked "$(cat <<'PAYLOAD'
-{
-  "source": "plugin",
-  "reason": "explicit-skip",
-  "assignedTrack": "dev",
-  "assignedFlowLevel": "fundamental",
-  "trackConfidence": 0.0
-}
-PAYLOAD
-)"
-```
-
-5. Tell them: "You're on the **Developer track (Fundamental level)** — the guided path. Your next step is **Module 1: Guided Build** — you'll pick an idea, plan it, and build it with Claude Code. You can always re-run `/orientation` later if you want a more tailored experience."
+3. Display the report (same format as Phase 7)
+4. Tell them: "You're on the **Developer track (Fundamental level)** — the guided path. Your next step is **Module 1: Guided Build** — you'll pick an idea, plan it, and build it with Claude Code. You can always re-run `/orientation` later if you want a more tailored experience."
